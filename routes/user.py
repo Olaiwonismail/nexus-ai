@@ -1,11 +1,12 @@
-from flask import Blueprint, jsonify, current_app, request
+from flask import Blueprint, send_file, jsonify, current_app, request
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from app import db
 from models import User, MedicalHistory
 from utils.auth import require_role, get_current_user_info
 from utils.qrcode_gen import generate_qr_code, generate_user_card
 import logging
-
+import io
+import base64
 user_bp = Blueprint('user', __name__)
 logger = logging.getLogger(__name__)
 
@@ -60,23 +61,41 @@ def generate_card():
         if not user:
             return jsonify({'message': 'User not found'}), 404
         
-        # Generate QR code from UUID
+        # Generate QR code
         qr_code = generate_qr_code(user.uuid)
         
-        # Generate user card image
-        card_image = generate_user_card(user.to_dict(), qr_code)
+        # Generate user card image (Returns base64 string)
+        card_image_b64 = generate_user_card(user.to_dict(), qr_code)
         
-        logger.info(f"Medical card generated for user: {user.uuid}")
+        # 1. Clean the Base64 string
+        # Some libraries include "data:image/png;base64," header. We must remove it.
+        if ',' in card_image_b64:
+            card_image_b64 = card_image_b64.split(',')[1]
+
+        # 2. Decode Base64 to Bytes
+        try:
+            image_data = base64.b64decode(card_image_b64)
+        except Exception as e:
+            logger.error(f"Base64 decode error: {e}")
+            return jsonify({'message': 'Error processing image data'}), 500
         
-        return jsonify({
-            'message': 'Card generated successfully',
-            'qr_code': qr_code,
-            'card_image': card_image,
-            'uuid': user.uuid
-        }), 200
+        # 3. Create a Byte Stream
+        image_stream = io.BytesIO(image_data)
+        
+        logger.info(f"Medical card generated and served for user: {user.uuid}")
+        
+        # 4. Return Image File
+        return send_file(
+            image_stream,
+            mimetype='image/png',      # Ensure this matches your generator's format (png/jpeg)
+            as_attachment=False,       # False = View in browser, True = Force download
+            download_name=f'NexusAI_Card_{user.uuid}.png'
+        )
+
     except Exception as e:
         logger.error(f"Error generating card: {str(e)}")
         return jsonify({'message': 'Internal server error'}), 500
+
 
 @user_bp.route('/profile', methods=['GET'])
 @require_role('user')

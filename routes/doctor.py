@@ -145,6 +145,43 @@ def query_user_by_uuid():
         logger.error(f"Error querying user: {str(e)}")
         return jsonify({'message': 'Internal server error'}), 500
 
+@doctor_bp.route('/user-medical-history/<user_uuid>', methods=['GET'])
+@require_role('doctor')
+def get_user_medical_history(user_uuid):
+    try:
+        doctor_info = get_current_user_info()
+        doctor_id = doctor_info['doctor_id']
+        
+        user = User.query.filter_by(uuid=user_uuid).first()
+        if not user:
+            logger.warning(f"Doctor {doctor_id} requested history for non-existent user: {user_uuid}")
+            return jsonify({'message': 'User not found'}), 404
+        
+        # Fetch all medical history entries for this user
+        history = MedicalHistory.query.filter_by(user_id=user.id).all()
+        
+        # Convert to list of dicts
+        history_data = [entry.to_dict() for entry in history]
+        
+        # Sort by entry_date descending (newest first)
+        # Note: sorting in python to avoid circular import or db specific issues if models not imported with desc
+        history_data.sort(key=lambda x: x.get('entry_date', '') or '', reverse=True)
+
+        logger.info(f"Doctor {doctor_id} retrieved medical history for user: {user.uuid}")
+        
+        return jsonify({
+            'message': 'User medical history retrieved',
+            'count': len(history_data),
+            'data': history_data,
+            'user': {
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'uuid': user.uuid
+            }
+        }), 200
+    except Exception as e:
+        logger.error(f"Error retrieving user history: {str(e)}")
+        return jsonify({'message': 'Internal server error'}), 500
 
 @doctor_bp.route('/scan-qr-code', methods=['POST'])
 @require_role('doctor')

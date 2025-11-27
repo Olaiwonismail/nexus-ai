@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from datetime import timedelta
-
+import os
 from extensions import db
 jwt = JWTManager()
 
@@ -13,7 +13,7 @@ def create_app(config_name='development'):
     app = Flask(__name__)
     
     # Configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///nexus_ai.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=30)

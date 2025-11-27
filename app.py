@@ -36,10 +36,12 @@ def create_app(config_name='development'):
     from routes.auth import auth_bp
     from routes.user import user_bp
     from routes.doctor import doctor_bp
+    from routes.health import health_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(user_bp, url_prefix='/api/user')
     app.register_blueprint(doctor_bp, url_prefix='/api/doctor')
+    app.register_blueprint(health_bp)
     
     # Create tables
     with app.app_context():

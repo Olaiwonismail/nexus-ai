@@ -47,7 +47,7 @@ def generate_user_card(user, qr_code_base64):
         
         # Draw card header
         draw.rectangle([(0, 0), (600, 60)], fill='#2E86AB')
-        draw.text((20, 15), "NEXUS AI - Medical Card", fill='white', font=title_font)
+        draw.text((20, 15), "NEXUS Lite - Medical Card", fill='white', font=title_font)
         
         # Draw user details
         y_position = 80
